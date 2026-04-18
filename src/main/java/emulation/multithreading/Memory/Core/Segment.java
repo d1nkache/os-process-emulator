@@ -17,6 +17,7 @@ public class Segment implements Comparable<Integer> {
     private final String name;
     private final BitSet data;
 
+    public static final int STANDARD_MAX_SIZE = 1024;
     public static final int INT8_MASK = 0xFF;
     public static final int INT8_SIZE = 8;
     public static final int INT32_SIZE = 32;
