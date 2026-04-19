@@ -9,5 +9,6 @@ import lombok.AllArgsConstructor;
 public class SegmentInfo {
     int size;
     int startAddress;
+    int ownerPid;
     String name;
 }

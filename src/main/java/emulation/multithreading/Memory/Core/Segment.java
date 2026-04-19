@@ -12,6 +12,7 @@ import emulation.multithreading.Memory.TransferObjects.SegmentInfo;
 @Getter
 public class Segment implements Comparable<Integer> {
     private final int size;
+    private final int ownerPid;
     private final int startAddress;
 
     private final String name;
@@ -22,9 +23,10 @@ public class Segment implements Comparable<Integer> {
     public static final int INT8_SIZE = 8;
     public static final int INT32_SIZE = 32;
 
-    public Segment(int size, int startAddress, String name) {
+    public Segment(int size, int startAddress, int ownerPid, String name) {
         this.size = size;
         this.startAddress = startAddress;
+        this.ownerPid = ownerPid;
         this.name = name;
         this.data = new BitSet();
     }
@@ -136,6 +138,7 @@ public class Segment implements Comparable<Integer> {
         return new SegmentInfo(
                 this.getSize(),
                 this.getStartAddress(),
+                this.getOwnerPid(),
                 this.getName()
         );
     }

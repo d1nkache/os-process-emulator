@@ -22,10 +22,10 @@ public class Heap {
     }
 
     // ################################# Operations #################################
-     public Segment allocateSegment(int size, String name) {
+     public Segment allocateSegment(int size, int ownerPid, String name) {
         if (isEnoughMemory(size)) {
             int address = findNextFreeAddress();
-            Segment toInsert = new Segment(size, address, name);
+            Segment toInsert = new Segment(size, address, ownerPid, name);
 
             memoryMap.put(address, toInsert);
             this.currentSize += size;
@@ -36,18 +36,18 @@ public class Heap {
          throw new RuntimeException("Not enough memory");
      }
 
-    public Segment allocateSegment(String name) {
-        if (!isEnoughMemory(Segment.STANDARD_MAX_SIZE)) {
-            throw new RuntimeException("Not enough memory");
+    public Segment allocateSegment(int ownerPid, String name) {
+        if (isEnoughMemory(Segment.STANDARD_MAX_SIZE)) {
+            int address = findNextFreeAddress();
+            Segment toInsert = new Segment(Segment.STANDARD_MAX_SIZE, address, ownerPid, name);
+
+            memoryMap.put(address, toInsert);
+            this.currentSize += Segment.STANDARD_MAX_SIZE;
+
+            return toInsert;
         }
 
-        int address = findNextFreeAddress();
-        Segment toInsert = new Segment(Segment.STANDARD_MAX_SIZE, address, name);
-
-        memoryMap.put(address, toInsert);
-        this.currentSize += Segment.STANDARD_MAX_SIZE;
-
-        return toInsert;
+        throw new RuntimeException("Not enough memory");
     }
 
     public boolean deallocateSegment(int startAddress) {
@@ -82,6 +82,23 @@ public class Heap {
 
          return last.getStartAddress() + last.getSize();
      }
+
+    private int findNextFreeAddress(int size) {
+        if (this.isEnoughMemory(size)) {
+            int candidateAddress = 0;
+
+            for (Segment elem : memoryMap.values()) {
+                if (elem.getStartAddress() - candidateAddress >= size) {
+                    return candidateAddress;
+                }
+                candidateAddress = elem.getStartAddress() + elem.getSize();
+            }
+
+            return candidateAddress;
+        }
+
+        throw new RuntimeException("Not enough memory");
+    }
 
     // ################################# GETTERS #################################
     @Nullable
