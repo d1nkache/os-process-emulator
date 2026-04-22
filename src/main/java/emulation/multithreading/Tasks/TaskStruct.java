@@ -1,10 +1,10 @@
 package emulation.multithreading.Tasks;
 
+import emulation.multithreading.Memory.Core.Segment;
 import lombok.Getter;
 
 import org.jetbrains.annotations.Nullable;
 
-import emulation.multithreading.Tasks.TaskState;
 import emulation.multithreading.Memory.Core.Heap;
 
 import java.util.List;
@@ -23,6 +23,7 @@ public class TaskStruct {
     private final HashMap<String, Integer> registers;
 
     private TaskState taskState;
+
 
     public TaskStruct(
             int pid,
@@ -57,6 +58,48 @@ public class TaskStruct {
         this.instructionPointer += 1;
 
         return fetchedInstruction;
+    }
+
+    @Nullable
+    public Integer readValueInt32(int fromAddress, int startIndex) {
+        Segment segment = this.memory.getSegmentByAddress(fromAddress);
+
+        if (segment == null) {
+            return null;
+        }
+
+        return segment.readInt32(startIndex);
+    }
+
+    @Nullable
+    public Integer readValueInt8(int fromAddress, int startIndex) {
+        Segment segment = this.memory.getSegmentByAddress(fromAddress);
+
+        if (segment == null) {
+            return null;
+        }
+
+        return segment.readInt8(startIndex);
+    }
+
+    public Boolean writeValueInt32(int fromAddress, int startIndex, int value) {
+        Segment segment = this.memory.getSegmentByAddress(fromAddress);
+
+        if (segment == null) {
+            return null;
+        }
+
+        return segment.writeInt32(startIndex, value);
+    }
+
+    public Boolean writeValueInt8(int fromAddress, int startIndex, int value) {
+        Segment segment = this.memory.getSegmentByAddress(fromAddress);
+
+        if (segment == null) {
+            return null;
+        }
+
+        return segment.writeInt8(startIndex, value);
     }
 
     public void start() {
