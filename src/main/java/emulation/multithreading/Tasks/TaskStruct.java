@@ -1,7 +1,10 @@
 package emulation.multithreading.Tasks;
 
-import emulation.multithreading.Memory.Core.Segment;
 import lombok.Getter;
+
+import emulation.multithreading.Memory.Core.Segment;
+import emulation.multithreading.Memory.Core.SegmentReader;
+import emulation.multithreading.Memory.Core.SegmentBuilder;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -60,46 +63,20 @@ public class TaskStruct {
         return fetchedInstruction;
     }
 
-    @Nullable
-    public Integer readValueInt32(int fromAddress, int startIndex) {
-        Segment segment = this.memory.getSegmentByAddress(fromAddress);
-
-        if (segment == null) {
-            return null;
+    public Segment allocateNewSegment(int size, String name) {
+        if (this.pid == this.tgid) {
+            return this.memory.allocateSegment(size, this.pid, name);
         }
 
-        return segment.readInt32(startIndex);
+        throw new RuntimeException("Only process could allocate memory");
     }
 
-    @Nullable
-    public Integer readValueInt8(int fromAddress, int startIndex) {
-        Segment segment = this.memory.getSegmentByAddress(fromAddress);
-
-        if (segment == null) {
-            return null;
+    public Segment allocateNewSegment(String name) {
+        if (this.pid == this.tgid) {
+            return this.memory.allocateSegment(this.pid, name);
         }
 
-        return segment.readInt8(startIndex);
-    }
-
-    public Boolean writeValueInt32(int fromAddress, int startIndex, int value) {
-        Segment segment = this.memory.getSegmentByAddress(fromAddress);
-
-        if (segment == null) {
-            return null;
-        }
-
-        return segment.writeInt32(startIndex, value);
-    }
-
-    public Boolean writeValueInt8(int fromAddress, int startIndex, int value) {
-        Segment segment = this.memory.getSegmentByAddress(fromAddress);
-
-        if (segment == null) {
-            return null;
-        }
-
-        return segment.writeInt8(startIndex, value);
+        throw new RuntimeException("Only process could allocate memory");
     }
 
     public void start() {
@@ -121,6 +98,26 @@ public class TaskStruct {
     }
 
     // ################################# GETTERS AND SETTERS #################################
+    public SegmentReader beginParse(int fromAddress) {
+        Segment segment = this.memory.getSegmentByAddress(fromAddress);
+
+        if (segment == null) {
+            throw new RuntimeException("No such segment");
+        }
+
+        return SegmentReader.beginParse(segment);
+    }
+
+    public SegmentBuilder begin(int fromAddress) {
+        Segment segment = this.memory.getSegmentByAddress(fromAddress);
+
+        if (segment == null) {
+            throw new RuntimeException("No such segment");
+        }
+
+        return SegmentBuilder.begin(segment);
+    }
+
     public boolean isProcess() {
         return this.tgid == this.pid;
     }
