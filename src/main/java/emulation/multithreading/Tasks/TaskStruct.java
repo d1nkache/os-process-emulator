@@ -1,23 +1,22 @@
 package emulation.multithreading.Tasks;
 
-import lombok.Getter;
-
+import emulation.multithreading.Memory.Core.Heap;
 import emulation.multithreading.Memory.Core.Segment;
-import emulation.multithreading.Memory.Core.SegmentReader;
 import emulation.multithreading.Memory.Core.SegmentBuilder;
+import emulation.multithreading.Memory.Core.SegmentReader;
+import emulation.multithreading.Tasks.TransferObjects.TaskContext;
+
+import lombok.Getter;
 
 import org.jetbrains.annotations.Nullable;
 
-import emulation.multithreading.Memory.Core.Heap;
-
-import java.util.List;
 import java.util.HashMap;
-
+import java.util.List;
 
 @Getter
 public class TaskStruct {
     private final int pid;
-    private final int tgid;
+    private final int threadGroupId;
 
     private final List<String> code;
     private int instructionPointer;
@@ -27,33 +26,30 @@ public class TaskStruct {
 
     private TaskState taskState;
 
-
     public TaskStruct(
             int pid,
-            int tgid,
+            int threadGroupId,
             List<String> code,
-            Heap memory,
-            int heapMaxSize
+            Heap memory
     ) {
         this.pid = pid;
-        this.tgid = tgid;
+        this.threadGroupId = threadGroupId;
         this.code = code;
         this.instructionPointer = 0;
         this.memory = memory;
-        this.registers = new HashMap<String, Integer>();
+        this.registers = new HashMap<>();
         this.taskState = TaskState.RUNNABLE;
     }
 
-    // ################################# Operations #################################
+    // ################################# Instructions #################################
     @Nullable
     public String fetchNextInstruction() {
-        if (this.instructionPointer >= this.code.size()) {
-            this.taskState = TaskState.ZOMBIE;
-
+        if (this.taskState != TaskState.RUNNABLE) {
             return null;
         }
 
-        if (this.taskState != TaskState.RUNNABLE) {
+        if (this.instructionPointer >= this.code.size()) {
+            this.terminate();
             return null;
         }
 
@@ -63,22 +59,45 @@ public class TaskStruct {
         return fetchedInstruction;
     }
 
+    // ################################# Memory Allocation #################################
     public Segment allocateNewSegment(int size, String name) {
-        if (this.pid == this.tgid) {
-            return this.memory.allocateSegment(size, this.pid, name);
+        if (!this.isProcess()) {
+            throw new IllegalStateException("Only process can allocate memory");
         }
 
-        throw new RuntimeException("Only process could allocate memory");
+        return this.memory.allocateSegment(size, this.pid, name);
     }
 
     public Segment allocateNewSegment(String name) {
-        if (this.pid == this.tgid) {
-            return this.memory.allocateSegment(this.pid, name);
+        if (!this.isProcess()) {
+            throw new IllegalStateException("Only process can allocate memory");
         }
 
-        throw new RuntimeException("Only process could allocate memory");
+        return this.memory.allocateSegment(this.pid, name);
     }
 
+    // ################################# Memory Access #################################
+    public SegmentReader beginParse(int fromAddress) {
+        Segment segment = this.memory.getSegmentByAddress(fromAddress);
+
+        if (segment == null) {
+            throw new IllegalArgumentException("No segment at address: " + fromAddress);
+        }
+
+        return SegmentReader.beginParse(segment);
+    }
+
+    public SegmentBuilder beginBuild(int fromAddress) {
+        Segment segment = this.memory.getSegmentByAddress(fromAddress);
+
+        if (segment == null) {
+            throw new IllegalArgumentException("No segment at address: " + fromAddress);
+        }
+
+        return SegmentBuilder.begin(segment);
+    }
+
+    // ################################# Task State #################################
     public void start() {
         this.taskState = TaskState.RUNNABLE;
     }
@@ -88,7 +107,7 @@ public class TaskStruct {
     }
 
     public void unblock() {
-        if (taskState == TaskState.WAITING) {
+        if (this.taskState == TaskState.WAITING) {
             this.taskState = TaskState.RUNNABLE;
         }
     }
@@ -97,35 +116,46 @@ public class TaskStruct {
         this.taskState = TaskState.ZOMBIE;
     }
 
-    // ################################# GETTERS AND SETTERS #################################
-    public SegmentReader beginParse(int fromAddress) {
-        Segment segment = this.memory.getSegmentByAddress(fromAddress);
+    // ################################# Context #################################
+    public TaskContext saveContext() {
+        return new TaskContext(
+                this.pid,
+                this.threadGroupId,
+                this.instructionPointer,
+                this.registers,
+                this.taskState
+        );
+    }
 
-        if (segment == null) {
-            throw new RuntimeException("No such segment");
+    public void restoreContext(TaskContext context) {
+        if (this.pid != context.pid()) {
+            throw new IllegalArgumentException("Cannot restore context of another task");
         }
 
-        return SegmentReader.beginParse(segment);
-    }
-
-    public SegmentBuilder begin(int fromAddress) {
-        Segment segment = this.memory.getSegmentByAddress(fromAddress);
-
-        if (segment == null) {
-            throw new RuntimeException("No such segment");
+        if (this.threadGroupId != context.threadGroupId()) {
+            throw new IllegalArgumentException("Cannot restore context from another thread group");
         }
 
-        return SegmentBuilder.begin(segment);
+        this.instructionPointer = context.instructionPointer();
+
+        this.registers.clear();
+        this.registers.putAll(context.registers());
+
+        this.taskState = context.taskState();
     }
 
-    public boolean isProcess() {
-        return this.tgid == this.pid;
-    }
-
+    // ################################# Registers #################################
     @Nullable
     public Integer getRegisterValue(String name) {
         return this.registers.get(name);
     }
 
-    public void setRegisterValue(String name, int value) { this.registers.put(name, value); }
+    public void setRegisterValue(String name, int value) {
+        this.registers.put(name, value);
+    }
+
+    // ################################# Helpers #################################
+    public boolean isProcess() {
+        return this.threadGroupId == this.pid;
+    }
 }
