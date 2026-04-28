@@ -1,6 +1,6 @@
 package emulation.multithreading.Tasks.TransferObjects;
 
-import emulation.multithreading.Tasks.TaskState;
+import emulation.multithreading.Tasks.Core.TaskState;
 
 import java.util.Map;
 

@@ -1,4 +1,4 @@
-package emulation.multithreading.Tasks;
+package emulation.multithreading.Tasks.Core;
 
 public enum TaskState {
     RUNNABLE,
