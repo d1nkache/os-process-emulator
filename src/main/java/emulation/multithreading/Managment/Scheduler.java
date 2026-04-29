@@ -8,7 +8,6 @@ import java.util.Comparator;
 import java.util.PriorityQueue;
 
 
-
 @Getter
 public class Scheduler {
     private TaskStruct currentTask;
