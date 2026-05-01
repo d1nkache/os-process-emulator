@@ -1,21 +1,21 @@
 package emulation.multithreading.Machine;
 
-import emulation.multithreading.Managment.Scheduler;
-import emulation.multithreading.Memory.Core.Heap;
-import emulation.multithreading.Tasks.Core.TaskStruct;
-
 import java.util.List;
+
+import emulation.multithreading.Memory.Core.Heap;
+import emulation.multithreading.Managment.Scheduler;
+import emulation.multithreading.Tasks.Core.TaskStruct;
 
 
 public class VirtualMachine {
     private int pidCounter;
-    private final Interpretator interpretator;
+    private final Interpreter interpreter;
     private final Scheduler scheduler;
 
     public VirtualMachine() {
         this.pidCounter = 0;
         this.scheduler = new Scheduler();
-        this.interpretator = new Interpretator();
+        this.interpreter = new Interpreter();
     }
 
     public int createProcess(List<String> code, int heapSize) {
@@ -52,14 +52,21 @@ public class VirtualMachine {
     public void run() {
         while (scheduler.schedule()) {
             TaskStruct task = this.scheduler.getCurrentTask();
-            String instruction = task.fetchNextInstruction();
+            if (task == null) {
+                continue;
+            }
 
+            String instruction = task.fetchNextInstruction();
             if (instruction == null) {
                 this.scheduler.terminateCurrent();
                 continue;
             }
 
-            this.interpretator.execute(task, instruction);
+            ExecutionResult result = this.interpreter.execute(task, instruction);
+            switch (result) {
+                case BLOCK -> this.scheduler.blockCurrent();
+                case YIELD -> this.scheduler.yieldCurrent();
+            }
             task.incrementVirtualRuntime();
         }
     }

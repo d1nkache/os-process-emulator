@@ -11,7 +11,6 @@ public class SegmentBuilder {
 
     public SegmentBuilder writeInt8(int value) {
         boolean result = this.segment.writeInt8(currentBit, value);
-
         if (result) {
             this.currentBit += 8;
             return this;
@@ -22,7 +21,6 @@ public class SegmentBuilder {
 
     public SegmentBuilder writeInt32(int value) {
         boolean result = this.segment.writeInt32(currentBit, value);
-
         if (result) {
             this.currentBit += 32;
             return this;

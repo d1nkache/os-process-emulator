@@ -11,8 +11,8 @@ import lombok.Getter;
 
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
 import java.util.List;
+import java.util.HashMap;
 
 
 @Getter
@@ -84,7 +84,6 @@ public class TaskStruct {
         // ################################# Memory Access #################################
         public SegmentReader beginParse(int fromAddress) {
             Segment segment = this.memory.getSegmentByAddress(fromAddress);
-
             if (segment == null) {
                 throw new IllegalArgumentException("No segment at address: " + fromAddress);
             }
@@ -94,7 +93,6 @@ public class TaskStruct {
 
         public SegmentBuilder beginBuild(int fromAddress) {
             Segment segment = this.memory.getSegmentByAddress(fromAddress);
-
             if (segment == null) {
                 throw new IllegalArgumentException("No segment at address: " + fromAddress);
             }
