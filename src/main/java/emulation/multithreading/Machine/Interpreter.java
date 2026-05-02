@@ -1,24 +1,34 @@
 package emulation.multithreading.Machine;
 
 import emulation.multithreading.Tasks.Core.TaskStruct;
-import emulation.multithreading.Memory.Core.SegmentBuilder;
 import emulation.multithreading.Memory.Core.SegmentReader;
+import emulation.multithreading.Memory.Core.SegmentBuilder;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 /*
     INTERPRETER INSTRUCTIONS
-    OPERATION NAME: save  ;      OPERANDS: n, v;     RESULT: TaskStruct.registers.put(a)
-    OPERATION NAME: sum   ;      OPERANDS: c, a, b;  RESULT: save(c = a + b)
-    OPERATION NAME: min   ;      OPERANDS: c, a, b;  RESULT: save(c = a - b)
-    OPERATION NAME: get   ;      OPERANDS: n   ;     RESULT: TaskStruct.registers.get(n)
-    OPERATION NAME: start ;      OPERANDS: a   ;     RESULT: TaskStruct.beginBuild(a)
-    OPERATION NAME: parse ;      OPERANDS: a   ;     RESULT: TaskStruct.beginParse(a)
-    OPERATION NAME: rvalue;      OPERANDS: r, s;     RESULT: parse.readInt + {s}
-    OPERATION NAME: wvalue;      OPERANDS: r, s, v;  RESULT: v = parse.writeInt + {s}(v)
+    OPERATION NAME: save        OPERANDS: n, v         RESULT: TaskStruct.registers.put(n, v)
+    OPERATION NAME: sum         OPERANDS: c, a, b      RESULT: save(c, a + b)
+    OPERATION NAME: min         OPERANDS: c, a, b      RESULT: save(c, a - b)
+    OPERATION NAME: get         OPERANDS: n            RESULT: TaskStruct.registers.get(n)
+    OPERATION NAME: start       OPERANDS: a            RESULT: TaskStruct.beginBuild(a)
+    OPERATION NAME: parse       OPERANDS: a            RESULT: TaskStruct.beginParse(a)
+    OPERATION NAME: rvalue      OPERANDS: r, s         RESULT: reader.readInt + {s}
+    OPERATION NAME: wvalue      OPERANDS: r, s, v      RESULT: builder.writeInt + {s}(v)
+    OPERATION NAME: nthread     OPERANDS: c, p, l      RESULT: virtualMachine.createThread(p, l)
  */
 public class Interpreter {
     private SegmentReader currentReader;
     private SegmentBuilder currentBuilder;
+
+    private final VirtualMachine virtualMachine;
+
+    public Interpreter(VirtualMachine virtualMachine) {
+        this.virtualMachine = virtualMachine;
+    }
 
     public ExecutionResult execute(TaskStruct task, String instruction) {
         if (instruction.isEmpty()) return ExecutionResult.CONTINUE;;
@@ -48,7 +58,7 @@ public class Interpreter {
                 yield ExecutionResult.CONTINUE;
             }
             case "minus" -> {
-                requireArgs(tokens, 3);
+                requireArgs(tokens, 4);
 
                 String target = tokens[1];
                 int operandA = getRegisterOrLiteral(task, tokens[2]);
@@ -59,18 +69,22 @@ public class Interpreter {
             }
             case "start" -> {
                 requireArgs(tokens, 2);
-                yield ExecutionResult.CONTINUE;
-            }
-            case "parse" -> {
-                requireArgs(tokens, 2);
 
                 int address = getRegisterOrLiteral(task, tokens[1]);
                 this.currentBuilder = task.beginBuild(address);
 
                 yield ExecutionResult.CONTINUE;
             }
-            case "rvalue" -> {
+            case "parse" -> {
                 requireArgs(tokens, 2);
+
+                int address = getRegisterOrLiteral(task, tokens[1]);
+                this.currentReader = task.beginParse(address);
+
+                yield ExecutionResult.CONTINUE;
+            }
+            case "rvalue" -> {
+                requireArgs(tokens, 3);
 
                 if (this.currentReader == null) {
                     throw new IllegalStateException("Reader is not initialized. Use parse first.");
@@ -89,14 +103,14 @@ public class Interpreter {
                 yield ExecutionResult.CONTINUE;
             }
             case "wvalue" -> {
-                requireArgs(tokens, 2);
+                requireArgs(tokens, 3);
 
-                if (this.currentReader == null) {
-                    throw new IllegalStateException("Reader is not initialized. Use parse first.");
+                if (this.currentBuilder == null) {
+                    throw new IllegalStateException("Builder is not initialized. Use start first.");
                 }
 
                 int size = Integer.parseInt(tokens[1]);
-                int toInsert = Integer.parseInt(tokens[2]);
+                int toInsert = getRegisterOrLiteral(task, tokens[2]);
 
                 switch (size) {
                     case 8  -> this.currentBuilder.writeInt8(toInsert);
@@ -106,6 +120,29 @@ public class Interpreter {
 
                 yield ExecutionResult.CONTINUE;
             }
+            case "nthread" -> {
+                requireArgs(tokens, 4);
+
+                String targetRegister = tokens[1];
+                int line = getRegisterOrLiteral(task, tokens[3]);
+                int programId = getRegisterOrLiteral(task, tokens[2]);
+
+                List<String> program = this.virtualMachine.getProgramById(programId);
+                if (program == null) {
+                    throw new NullPointerException();
+                }
+
+                if (line < 0 || line >= program.size()) {
+                    throw new IllegalArgumentException("Invalid start line: " + line);
+                }
+
+                List<String> threadCode = new ArrayList<>(program.subList(line, program.size()));
+                TaskStruct thread = this.virtualMachine.createThreadFor(task, threadCode);
+
+                task.setRegisterValue(targetRegister, thread.getPid());
+                yield ExecutionResult.CONTINUE;
+            }
+
             case "yield"     -> { yield ExecutionResult.YIELD; }
             case "block"     -> { yield ExecutionResult.BLOCK; }
             case "terminate" -> { yield ExecutionResult.TERMINATE; }

@@ -1,0 +1,10 @@
+# Main process: spawns two worker threads
+save workerAProgram 1
+save workerBProgram 2
+nthread workerAPid workerAProgram 0
+nthread workerBPid workerBProgram 0
+save base 10
+yield
+sum total base 5
+minus diff total 3
+terminate

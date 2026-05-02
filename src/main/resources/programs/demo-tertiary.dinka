@@ -1,0 +1,6 @@
+# Worker thread B
+save local 7
+yield
+sum doubled local local
+minus final doubled 3
+terminate
