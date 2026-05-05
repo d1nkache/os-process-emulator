@@ -11,7 +11,7 @@ public class SegmentReader {
 
     public int readInt8() {
         int result = this.segment.readInt8(this.currentBit);
-        this.currentBit += Segment.INT8_MASK;
+        this.currentBit += Segment.INT8_SIZE;
 
         return result;
     }

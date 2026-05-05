@@ -1,14 +1,14 @@
 package emulation.multithreading;
 
-import emulation.multithreading.Machine.VirtualMachine;
 import emulation.multithreading.Tasks.Core.TaskStruct;
+import emulation.multithreading.Machine.VirtualMachine;
 
 public class Main {
     public static void main(String[] args) {
         VirtualMachine virtualMachine = new VirtualMachine();
         virtualMachine.init();
 
-        int processId = virtualMachine.createProcessFromProgram("demo-math", 256);
+        int processId = virtualMachine.createProcessFromProgram("demo-math", 65536);
 
         virtualMachine.run();
 

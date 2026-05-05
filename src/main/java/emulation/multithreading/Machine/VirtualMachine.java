@@ -1,5 +1,7 @@
 package emulation.multithreading.Machine;
 
+import lombok.Getter;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
@@ -18,6 +20,7 @@ import emulation.multithreading.Tasks.Core.TaskStruct;
 import org.jetbrains.annotations.Nullable;
 
 
+@Getter
 public class VirtualMachine {
     private static final Path RESOURCES_PROGRAMS_DIRECTORY = Path.of("src", "main", "resources", "programs");
 
@@ -76,6 +79,7 @@ public class VirtualMachine {
         this.interpreter = new Interpreter(this);
     }
 
+    // ################################# OPERATIONS #################################
     public int createProcess(List<String> code, int heapSize) {
         int pid = this.pidCounter++;
         int threadGroupId = pid;
@@ -136,6 +140,40 @@ public class VirtualMachine {
         return createThread(process, code);
     }
 
+    public void run() {
+        while (scheduler.schedule()) {
+            TaskStruct task = this.scheduler.getCurrentTask();
+            if (task == null) {
+                continue;
+            }
+
+            String instruction = task.fetchNextInstruction();
+            if (instruction == null) {
+                this.scheduler.terminateCurrent();
+                continue;
+            }
+
+            ExecutionResult result = this.interpreter.execute(task, instruction);
+            switch (result) {
+                case CONTINUE, YIELD -> this.scheduler.yieldCurrent();
+                case BLOCK -> this.scheduler.blockCurrent();
+                case TERMINATE -> this.scheduler.terminateCurrent();
+            }
+            task.incrementVirtualRuntime();
+        }
+    }
+
+    // ################################# HELPERS #################################
+    @Nullable
+    private Path resolveProgramsDirectory() {
+        if (Files.exists(RESOURCES_PROGRAMS_DIRECTORY)) {
+            return RESOURCES_PROGRAMS_DIRECTORY;
+        }
+
+        return null;
+    }
+
+    // ################################# GETTERS #################################
     @Nullable
     public TaskStruct getTaskById(int taskId) {
         return this.tasks.get(taskId);
@@ -172,37 +210,5 @@ public class VirtualMachine {
         }
 
         return leader;
-    }
-
-    public void run() {
-        while (scheduler.schedule()) {
-            TaskStruct task = this.scheduler.getCurrentTask();
-            if (task == null) {
-                continue;
-            }
-
-            String instruction = task.fetchNextInstruction();
-            if (instruction == null) {
-                this.scheduler.terminateCurrent();
-                continue;
-            }
-
-            ExecutionResult result = this.interpreter.execute(task, instruction);
-            switch (result) {
-                case CONTINUE, YIELD -> this.scheduler.yieldCurrent();
-                case BLOCK -> this.scheduler.blockCurrent();
-                case TERMINATE -> this.scheduler.terminateCurrent();
-            }
-            task.incrementVirtualRuntime();
-        }
-    }
-
-    @Nullable
-    private Path resolveProgramsDirectory() {
-        if (Files.exists(RESOURCES_PROGRAMS_DIRECTORY)) {
-            return RESOURCES_PROGRAMS_DIRECTORY;
-        }
-
-        return null;
     }
 }

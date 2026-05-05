@@ -3,6 +3,7 @@ package emulation.multithreading.Machine;
 import emulation.multithreading.Tasks.Core.TaskStruct;
 import emulation.multithreading.Memory.Core.SegmentReader;
 import emulation.multithreading.Memory.Core.SegmentBuilder;
+import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +21,7 @@ import java.util.List;
     OPERATION NAME: wvalue      OPERANDS: r, s, v      RESULT: builder.writeInt + {s}(v)
     OPERATION NAME: nthread     OPERANDS: c, p, l      RESULT: virtualMachine.createThread(p, l)
  */
+@Getter
 public class Interpreter {
     private SegmentReader currentReader;
     private SegmentBuilder currentBuilder;
@@ -30,6 +32,7 @@ public class Interpreter {
         this.virtualMachine = virtualMachine;
     }
 
+    // ################################# OPERATIONS #################################
     public ExecutionResult execute(TaskStruct task, String instruction) {
         if (instruction.isEmpty()) return ExecutionResult.CONTINUE;;
 
@@ -152,14 +155,6 @@ public class Interpreter {
         };
     }
 
-    private int getRegisterOrLiteral(TaskStruct task, String token) {
-        Integer registerValue = task.getRegisterValue(token);
-        if (registerValue != null) {
-            return registerValue;
-        }
-
-        return Integer.parseInt(token);
-    }
 
     private void requireArgs(String[] tokens, int expected) {
         if (tokens.length != expected) {
@@ -171,5 +166,15 @@ public class Interpreter {
                             + ", got: " + (tokens.length - 1)
             );
         }
+    }
+
+    // ################################# GETTERS #################################
+    private int getRegisterOrLiteral(TaskStruct task, String token) {
+        Integer registerValue = task.getRegisterValue(token);
+        if (registerValue != null) {
+            return registerValue;
+        }
+
+        return Integer.parseInt(token);
     }
 }
